@@ -305,11 +305,11 @@ def f_get_options(args_in):
     error = False
 
     if opt.t_min is None:
-        print "require t_min"
+        print("require t_min")
         error = True
 
     if len(args) <= 0:
-        print "need file(s)"
+        print( "need file(s)")
         error = True
 
     y = [slice(None, None)]
@@ -337,11 +337,11 @@ if __name__ == '__main__':
 
         for file_name in args:
 
-            print file_name
+            print( file_name)
 
             t, y = f_get_t_y(file_name, opt.t_name, opt.y_name, opt.y_slice,
                              opt.div_by_t)
 
             val = eval_dic[opt.eval_type](t, y, opt.t_min, opt.n_skip,
                                           opt.t_max)
-            print '%.8e %.8e %i' % (val)
+            print( '%.8e %.8e %i' % (val))

@@ -2,10 +2,12 @@
 some common utilities
 """
 
+from __future__ import absolute_import, print_function, division
 
 import os as _os
 from collections import OrderedDict as _od
 import ast as _ast
+
 
 def get_file_description_dic(fname,ext,name_key='name',id_key='rn',\
                              sep='_', lower_keys=False, lower_values=False,
@@ -38,33 +40,31 @@ def get_file_description_dic(fname,ext,name_key='name',id_key='rn',\
     =======
     dic of {key:val...}
     """
-    
-    y=_os.path.basename(fname).strip(ext).split('_')
 
-    d=_od()
+    y = _os.path.basename(fname).strip(ext).split('_')
+
+    d = _od()
 
     if name_key is not None:
-        d[name_key]=y[0]
+        d[name_key] = y[0]
 
+    d[id_key] = y[1]
 
-    d[id_key]=y[1]
-    
     #add in reset
-    k=y[2::2]
+    k = y[2::2]
     if lower_keys:
-        k=[x.lower() for x in k]
+        k = [x.lower() for x in k]
 
-    v=y[3::2]
+    v = y[3::2]
     if lower_values:
-        v=[x.lower() for x in v]
-        
-    
-    d.update(_od( zip(k,v) ))
+        v = [x.lower() for x in v]
+
+    d.update(_od(zip(k, v)))
 
     #convert to int or float
     for k in d:
 
-        d[k]=try_string_conversion(d[k])
+        d[k] = try_string_conversion(d[k])
         # try:
         #     d[k]=_ast.literal_eval(d[k])
         # except:
@@ -72,7 +72,7 @@ def get_file_description_dic(fname,ext,name_key='name',id_key='rn',\
 
     if path:
         d['path'] = fname
-            
+
     return d
 
 
@@ -83,36 +83,31 @@ def try_string_conversion(x):
     if fails, returns string
     """
     try:
-        y=_ast.literal_eval(x)
+        y = _ast.literal_eval(x)
     except:
-        y=x
+        y = x
 
     return y
-    
-    
 
 
+if __name__ == '__main__':
 
-if __name__=='__main__':
-    
-    fname='HS_1-A_Temp_1.0_Dens_0.95_n_1000_Some_200.00abc_.a.b.c'
-    ext='.a.b.c'
-    print 'fname',fname
-    print 'ext',ext
+    fname = 'HS_1-A_Temp_1.0_Dens_0.95_n_1000_Some_200.00abc_.a.b.c'
+    ext = '.a.b.c'
+    print('fname', fname)
+    print('ext', ext)
 
+    d = get_file_description_dic(fname, ext, lower_keys=False)
 
-    d=get_file_description_dic(fname,ext,lower_keys=False)
+    print(d)
 
-    print d
+    for (k, v) in d.iteritems():
+        print(k, v, type(v))
 
-    for (k,v) in d.iteritems():
-        print k,v,type(v)
-    
+    print("lower_keys=True")
+    d = get_file_description_dic(fname, ext, lower_keys=True)
 
-    print "lower_keys=True"
-    d=get_file_description_dic(fname,ext,lower_keys=True)
+    print(d)
 
-    print d
-
-    for (k,v) in d.iteritems():
-        print k,v,type(v)
+    for (k, v) in d.iteritems():
+        print(k, v, type(v))

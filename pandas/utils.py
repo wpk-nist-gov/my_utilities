@@ -114,21 +114,42 @@ def interpolate_DataFrame(df,
     else:
         xx = x
 
-    #make empty DataFrame.  Index only
+    ## old way:
+    # #make empty DataFrame.  Index only
+    # interp_df = pd.DataFrame({interp_column: xx}).set_index(interp_column)
 
-    interp_df = pd.DataFrame({interp_column: xx}).set_index(interp_column)
+    # #add new rows
+    # t = pd.concat((df.set_index(interp_column), interp_df))
+    ## end old way
 
-    #add new rows
-    t = pd.concat((df.set_index(interp_column), interp_df))
+    ## new way
+    # consider doing something like below:
+    # if drop_duplicates:
+    #     t = df.drop_duplicates()
+    # else:
+        # t = df
+
+    # set index
+    t = df.set_index(interp_column)
+
+    # new index from union of indicies
+    idx_df = t.index
+    idx_x = pd.Index(xx, name=idx_df.name
+    )
+    idx_union = idx_df.union(idx_x)
+
+    # reindex
+    t = t.reindex(idx_union)
+    # end new way
 
     if sort_index:
         t = t.sort_index()
 
     #interpolate over index (linear interpolation)
-    t = t.interpolate('index')  #.loc[interp_df.index].reset_index()
+    t = t.interpolate('index')  
 
     if not retAll:
-        t = t.loc[interp_df.index]
+        t = t.reindex(idx_x)
 
     t = t.reset_index()
 
@@ -178,12 +199,16 @@ def interpolate_DataFrame_group(df,
         d = dict(zip(group_columns, vv))
 
 
-        L.append(interpolate_DataFrame(g.drop(group_columns, axis=1),
-                                   x, interp_column,
-                                   maskminmax,
-                                   sort_index,
-                                   retAll,**kwargs)
-                 .assign(**d)
+        L.append(
+            interpolate_DataFrame(
+                df=g.drop(group_columns, axis=1),
+                x=x,
+                interp_column=interp_column,
+                maskminmax=maskminmax,
+                sort_index=sort_index,
+                retAll=retAll,**kwargs
+            )
+            .assign(**d)
         )
 
     return pd.concat(L)
@@ -289,3 +314,119 @@ def StatsAggDataFrame(df,
                 t.columns = [x.replace(c + d, '') for x in t.columns]
 
     return t
+
+
+
+from scipy.stats import t as tdist
+
+
+def StatsAggDataFrame_2(df,
+                        gcol,
+                        ycol=None,
+                        functions=None,
+                        collapse='_',
+                        droplist=['mean'],
+                        drop_std=True,
+                        drop_size=True,
+                        conf=0.95):
+    """
+    Perform common stats on frame
+
+    Parameters
+    ----------
+
+    df: DataFrame
+        frame to aggregate
+
+    gcol: list
+          columns to groupby
+
+    ycol: list
+          columns to aggregate over.
+          if ycol==None, use all columns less gcol
+
+    collapse: bool or str
+      if 'True': collapse Multiindex columns to regular index with '_'
+      if 'False' or None: do nothing
+      if str: collapse Mutiindex with character collapse
+
+    droplist: list like
+     if 'False' (or evaluates False): nothing
+     otherwise, loop over droplist and drop 'collapse'+droplist[i]
+     from column names. (default=['mean'])
+
+    drop_std : bool (default True)
+        if True, drop standard deviations
+
+    drop_size : bool (default True)
+        if True, drop local size
+
+
+    conf : float or None:
+    if not None, than 
+
+    globalSize: 
+      if type(globalSize) is str, then add a column of name
+      'globalSize' with size of each group
+
+
+    Returns
+    -------
+
+    dfA: DataFrame 
+      Aggregated DataFrame 
+
+    """
+
+    functions = ['mean']
+
+    if not drop_std or conf:
+        functions.append('std')
+
+    if not drop_size or conf:
+        functions.append('count')
+
+    if ycol is None:
+        ycol = list(df.columns.drop(gcol))
+
+    # group, mean, and swap
+    t = df[gcol + ycol].groupby(gcol).agg(functions).swaplevel(i=-1,j=0,axis=1).sortlevel(axis=1)
+
+    if conf:
+        # calculate Standard error frame:
+        SE = t['std'] / np.sqrt(t['count']) * tdist.isf(0.5 * (1. - conf), t['count'] - 1)
+
+        # add in SE label
+        SE = pd.concat({'SE':SE},axis=1)
+
+        # add into frame
+        t = pd.concat((t,SE),axis=1)
+
+    if drop_size:
+        t = t.drop('count',axis=1)
+
+    if drop_std:
+        t = t.drop('std',axis=1)
+
+    # swap names back to end
+    t = t.swaplevel(i=0,j=-1,axis=1)
+
+    #collapse
+    if collapse:
+        #collapse column names
+        if type(collapse) is str:
+            c = collapse
+        else:
+            c = '_'
+        #join and strip trailing separators
+        t.columns = [c.join(x).rstrip(c) for x in t.columns]
+
+        #drop '_mean'?
+        if droplist:
+            for d in droplist:
+                t.columns = [x.replace(c + d, '') for x in t.columns]
+
+    return t
+
+
+

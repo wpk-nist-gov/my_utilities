@@ -43,13 +43,13 @@ def clean_path(path_list):
     return L
 
 if __name__=='__main__':
-    print "simple_find_files(pattern='*.py',root_directory='..//')"
+    print( "simple_find_files(pattern='*.py',root_directory='..//')" )
     L=simple_find_files('*.py','..//')
 
     for l in L:
-        print l
+        print(l)
 
-    print "clean up path_list"
+    print( "clean up path_list" )
     L=clean_path(L)
     for l in L:
-        print l
+        print(l)
